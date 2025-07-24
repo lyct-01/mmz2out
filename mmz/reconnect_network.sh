@@ -68,19 +68,36 @@ nameserver 8.8.8.8" > /etc/resolv.conf
  Sub_Str "MONITOR_SENSOR_TYPE"
  Check_Return=$?
  if [ $Check_Return -eq 0 ];then
- if [ "$Return_Sub_Str" != "NULL" ];then
- Network_Way=$Return_Sub_Str
- echo $Network_Way
+	if [ "$Return_Sub_Str" != "NULL" ];then
+		Network_Way=$Return_Sub_Str
+		echo $Network_Way
+ 	fi 
  fi 
- fi 
- 
+ #读取4G拨号方式，目前支持ppp和qmi
+Return_Sub_Str=NULL
+Sub_Str "MODE_4G"
+Check_Return=$?
+if [ $Check_Return -eq 0 ];then
+	if [ "$Return_Sub_Str" != "NULL" ];then
+		Mode_4G=$Return_Sub_Str
+		echo $Mode_4G
+	fi 
+fi 
+
  #4G重连
 if [ "$Network_Way" = "4G" ];then
  echo "-------------4G reconnection-------------"
- killall quectel-CM
-#  source /mmz/ppp/peers/quectel-pppd.sh &
+ if [ "$Mode_4G" = "PPP" ];then
+	killall -9 pppd
+	source /mmz/ppp/peers/quectel-pppd.sh &
+ elif [ "$Mode_4G" = "QMI" ];then
+	killall -9 quectel-CM
+	sh /mmz/qmi/quectel-CM.sh &
+ else
+	echo "请设置MODE_4G为[PPP]或[QMI]"
+fi
 #替换为qmi拨号
-sh /mmz/qmi/quectel-CM.sh &
+# sh /mmz/qmi/quectel-CM.sh &
 
  sleep 10
 #wifi重连
@@ -122,9 +139,17 @@ elif [ "Network_Way" = "AUTO" ]; then
 	#以太网失效连接4G
 	else
 		echo ""
-		killall -9 pppd
-		Ethernet "[AUTO] try 4G connection ."
-		source /mmz/ppp/peers/quectel-pppd.sh &
+		if [ "$Mode_4G" = "PPP" ];then
+			killall -9 pppd
+			echo "[AUTO] try 4G ppp connection ."
+			source /mmz/ppp/peers/quectel-pppd.sh &
+		elif [ "$Mode_4G" = "QMI" ];then
+			killall -9 quectel-CM
+			echo "[AUTO] try 4G qmi connection ."
+			sh /mmz/qmi/quectel-CM.sh &
+		else
+			echo "请设置MODE_4G为[PPP]或[QMI]"
+		fi
 		sleep 10
 		if ping -c 1 8.8.8.8 > /dev/null 2>&1; then
 			echo "[AUTO] 4G OK"

@@ -5,12 +5,18 @@ applUpgrade=/mmz/upgrade
 
 upgradeFile=/mmz/upgrade/afrmc_upgrade.zip
 upgrade_sh=/mmz/upgrade/upgrade.sh
+# Linux版本号
+old_version="4.1.15"
 
-
-acPid=$(ps aux | grep afrmc_control | grep -v grep | awk '{print $1}')
-amPid=$(ps aux | grep afrmc_monitor | grep -v grep | awk '{print $1}')
-auPid=$(ps aux | grep afrmc_uart | grep -v grep | awk '{print $1}')
-
+if [ "$old_version" = "$(uname -r)" ];then
+    acPid=$(ps | grep afrmc_control | grep -v grep | awk '{print $1}')
+    amPid=$(ps | grep afrmc_monitor | grep -v grep | awk '{print $1}')
+    auPid=$(ps | grep afrmc_uart | grep -v grep | awk '{print $1}')
+else
+    acPid=$(ps aux | grep afrmc_control | grep -v grep | awk '{print $1}')
+    amPid=$(ps aux | grep afrmc_monitor | grep -v grep | awk '{print $1}')
+    auPid=$(ps aux | grep afrmc_uart | grep -v grep | awk '{print $1}')
+fi
 
 # Returns 0 if the process with PID $1 is running.
 checkProcessIsRunning() {

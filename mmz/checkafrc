@@ -6,6 +6,7 @@
 # return:
 # 0 is exist, 1 is no exist
 #------------------------------------------------------------------------------
+old_version="4.1.15" # Linux版本号
 led_heart_num=1	#led心跳灯控制
 #检查程序是否存活
 CheckProcess()
@@ -16,8 +17,13 @@ CheckProcess()
     return 1
   fi
 
-  #$PROCESS_NUM get process num,1 is success,0 is failed to reset 
-  PROCESS_NUM=`ps aux | grep $1 | grep -v "grep" | wc -l` 
+  #$PROCESS_NUM get process num,1 is success,0 is failed to reset
+  if [ "$old_version" = "$(uname -r)" ];then
+  	PROCESS_NUM=`ps | grep $1 | grep -v "grep" | wc -l`
+  else
+	PROCESS_NUM=`ps aux | grep $1 | grep -v "grep" | wc -l`
+  fi
+
   if [ $PROCESS_NUM -eq 1 ];
   then
     return 0
@@ -68,11 +74,13 @@ Sub_Str()
 Check_Network_Connect()
 {
 	if [ "$1" = "4G" ];then
-		if ifconfig |grep wwan0 >/dev/null ;then
+		if ifconfig | grep ppp0 >/dev/null ;then
+			return 0
+		elif ifconfig | grep wwan0 >/dev/null ;then
 			return 0
 		else
       # 4G网络断开
-      echo -e "AT+CFUN=1,1\r\n" >/dev/ttyUSB2
+      		echo -e "AT+CFUN=1,1\r\n" >/dev/ttyUSB2
 			return 1
 		fi 
 	else if [ "$1" = "WIFI" ];then
