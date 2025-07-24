@@ -5,6 +5,7 @@ applUpgrade=/mmz/upgrade
 
 upgradeFile=/mmz/upgrade/afrmc_upgrade.zip
 upgrade_sh=/mmz/upgrade/upgrade.sh
+
 # Linux版本号
 old_version="4.1.15"
 
@@ -121,7 +122,9 @@ upgradeInv() {
     fi
     
     killall -s SIGUSR1 afrmc_uart 
+    echo "开始执行升级程序afrmc_invup..."
     /mmz/afrmc_invup >> /dev/null 
+    echo "已执行升级程序afrmc_invup..."
     echo $(date) invup successful >> /mmz/runinfo
 
     return 0
