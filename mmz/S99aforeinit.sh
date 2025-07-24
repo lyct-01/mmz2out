@@ -17,6 +17,4 @@ sleep 1
 /mmz/afrmc_monitor >> /dev/null &
 sleep 1
 /mmz/checkafrc >> /dev/null &
-sleep 1
-/mmz/reconnect_network.sh >> /dev/null &
 exit 0
