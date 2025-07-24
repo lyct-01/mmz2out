@@ -18,5 +18,5 @@ sleep 1
 sleep 1
 /mmz/checkafrc >> /dev/null &
 sleep 1
-bash /mmz/reconnect_network.sh >> /dev/null &
+/mmz/reconnect_network.sh >> /dev/null &
 exit 0

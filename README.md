@@ -1,4 +1,7 @@
 ## mmz输出文件
 
-* [main: 仅修改/mmz/conf/下log配置]
+* [v0.0.1]
+    1E2X固定115200波特率
+
+* [v0.0.0][main: 仅修改/mmz/conf/下log配置]
     初始文件，仅修改Log配置
