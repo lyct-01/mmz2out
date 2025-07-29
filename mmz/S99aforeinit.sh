@@ -5,6 +5,7 @@ chmod 755 /mmz/checkafrc
 ifconfig eth0 192.168.1.123
 rm /dev/ttymxc3
 rm /mmz/log/*.log.*
+rm /mmz/upgrade/*
 sleep 1
 ln /dev/ttymxc1 /dev/ttymxc3
 cat /dev/ttyUSB2  > /mmz/4g_signal &
