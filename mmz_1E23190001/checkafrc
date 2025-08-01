@@ -1,0 +1,203 @@
+#!/bin/sh
+
+#------------------------------------------------------------------------------
+# fun:CheckProcess
+# input arg:$1 --- process name
+# return:
+# 0 is exist, 1 is no exist
+#------------------------------------------------------------------------------
+old_version="4.1.15" # Linux版本号
+led_heart_num=1	#led心跳灯控制
+#检查程序是否存活
+CheckProcess()
+{
+  #check input arg
+  if [ "$1" = "" ];
+  then
+    return 1
+  fi
+
+  #$PROCESS_NUM get process num,1 is success,0 is failed to reset
+  if [ "$old_version" = "$(uname -r)" ];then
+  	PROCESS_NUM=`ps | grep $1 | grep -v "grep" | wc -l`
+  else
+	PROCESS_NUM=`ps aux | grep $1 | grep -v "grep" | wc -l`
+  fi
+
+  if [ $PROCESS_NUM -eq 1 ];
+  then
+    return 0
+  else
+    return 1
+  fi
+}
+#程序挂掉就重新启动程序
+reboot_code()
+{
+	#check input arg
+	if [ "$1" = "" ];then
+		return 1
+	fi
+	CheckQQ_RET=0
+	CheckProcess "/mmz/$1"
+	CheckQQ_RET=$?
+	if [ $CheckQQ_RET -eq 1 ];then
+		#killall -9 $1
+        killall -s SIGUSR1 $1
+		led_heart_sleep 1
+		/mmz/$1 >> /dev/null &
+		#starttime=$(date +%Y-%m-%d\ %H:%M:%S)
+		#echo "$starttime reboot /mmz/$1" >> 1.txt
+	fi
+}
+
+#读取配置文件
+Sub_Str()
+{
+  #check input arg
+  if [ "$1" = "" ];
+  then
+    return 1
+  fi
+  line=$(grep -n "$1"  /mmz/conf/afrmc.conf | cut -d ":" -f 1)
+  #读取SysConfig.ini第二行
+  typeInf=$(head -n $line /mmz/conf/afrmc.conf|tail -n 1)
+  #去除右边第一个'#'开始的后边所有字符
+  typeInf=${typeInf%%#*}
+  #去除左边最后一个'='前面所有字符
+  Return_Sub_Str=${typeInf##*=}
+  return 0
+}
+
+	
+ #检查网络连接
+Check_Network_Connect()
+{
+	if [ "$1" = "4G" ];then
+		if ifconfig | grep ppp0 >/dev/null ;then
+			return 0
+		elif ifconfig | grep wwan0 >/dev/null ;then
+			return 0
+		else
+      # 4G网络断开
+      		echo -e "AT+CFUN=1,1\r\n" >/dev/ttyUSB2
+			return 1
+		fi 
+	else if [ "$1" = "WIFI" ];then
+		if ifconfig |grep wlan0 >/dev/null ;then
+			return 0
+		else
+			return 1
+		fi 
+	fi
+	fi
+	return 0
+}
+
+led_heart_sleep(){
+	led_heart_sleep_tmp=0
+	if [[ $led_heart_sleep_tmp -gt $1 ]];then
+		return 0
+	fi
+	sleep 1
+	if [ $led_heart_num -eq 0 ];then
+		user_gpio GPIO5 4 1
+		led_heart_num=1
+	else
+		user_gpio GPIO5 4 0
+		led_heart_num=0
+	fi
+	let led_heart_sleep_tmp+=1
+}
+
+#读取联网方式
+ Return_Sub_Str=NULL
+ Sub_Str "MONITOR_SENSOR_TYPE"
+ Check_Return=$?
+ if [ $Check_Return -eq 0 ];then
+ if [ "$Return_Sub_Str" != "NULL" ];then
+ Network_Way=$Return_Sub_Str
+ echo $Network_Way
+ fi 
+ fi
+	time_num=0
+	if [ "$Network_Way" = "4G" ];then
+	while [ 1 ] ; do
+	#echo $time_num
+	#判断 file.sh 文件中是否存在该字符串 
+	if ! grep "+CSQ:" /mmz/4g_signal >/dev/null;then 
+		#不存在，重新发送指令 
+		echo -e "AT+CSQ\r\n" > /dev/ttyUSB2
+		#echo "111111111 AT+CSQ 111111111111111"
+	fi
+	led_heart_sleep 1
+	if ! grep "+CCID:" /mmz/4g_signal >/dev/null ;then
+		#不存在，重新发送指令 
+		echo -e "AT+CCID\r\n" > /dev/ttyUSB2
+		#echo "2222222222 AT+CCID 2222222222222222"
+	fi
+	led_heart_sleep 1
+	sync
+	if [[ $time_num -gt 10 ]];then
+		break
+	fi
+ let time_num+=1
+ done
+ else
+ 	led_heart_sleep 30
+ fi
+
+reboot_num=0	#每40分钟重启一次拨号，拨号失败自增，连续10次拨号失败则重启系统
+time_num=0		#每1分钟自增一次，计时40分钟ping 114网关
+network_disconnect_num=0	#ping 114网关失败则自增，连续5次失败则重启拨号
+while [ 1 ] ; do
+
+	reboot_code "afrmc_uart"
+	led_heart_sleep 1
+	reboot_code "afrmc_control"
+	led_heart_sleep 1
+	reboot_code "afrmc_monitor"
+	led_heart_sleep 1
+	#每1分钟检查一次网卡，检查失败则重启拨号程序
+	Check_Network_Connect "$Network_Way"
+	 Check_Return=$?
+	if [ $Check_Return -eq 1 ];then
+		killall -9 /mmz/reconnect_network.sh
+		source /mmz/reconnect_network.sh >> /dev/null &
+		user_gpio GPIO5 3 0
+		echo 0 > /tmp/net_status
+	fi
+	led_heart_sleep 1
+	#echo -e "AT+CSQ\r\n" > /dev/ttyUSB2
+        #echo "22222222222222222222222222"
+	#每40分钟尝试ping 114网关，5次失败则重启拨号
+	if [[ $time_num -gt 40 || 0 -ne $network_disconnect_num ]];then
+		time_num=0
+		ping -c 1 8.8.8.8 > /dev/null 2>&1
+		if [ $? -eq 0 ];then
+			network_disconnect_num=0
+			reboot_num=0
+			user_gpio GPIO5 3 1
+			echo 1 > /tmp/net_status
+		else
+			user_gpio GPIO5 3 0
+			let network_disconnect_num+=1
+			echo 0 > /tmp/net_status
+		fi
+		#echo "--------network_disconnect_num = $network_disconnect_num"
+	fi 
+	#重启拨号
+	if [[ $network_disconnect_num -gt 5 ]];then
+		network_disconnect_num=0
+		let reboot_num+=1
+		killall -9 /mmz/reconnect_network
+		source /mmz/reconnect_network >> /dev/null &
+		#echo "network_disconnect_num > 5"
+	fi
+	#每40分钟重启一次拨号，连续10次拨号失败则重启系统
+	if [[ $reboot_num -gt 10 ]];then
+		reboot
+	fi
+	led_heart_sleep 60
+	let time_num+=1
+done
