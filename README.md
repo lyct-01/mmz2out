@@ -1,4 +1,8 @@
 ## mmz输出文件
+
+* [v1.0.7]
+    * 修改版本号为1E23190001
+    * 升级重试5次变更为升级1次
 * [v1.0.6]
     * 针对1E0A升级时0x59干扰处理
 * [v1.0.5]
@@ -31,3 +35,4 @@
     初始文件，仅修改Log配置
 
 [下载链接](https://github.com/lyct-01/mmz2out/releases)
+[下载链接](https://github.com/lyct-01/mmz2out/tags)
