@@ -51,7 +51,7 @@ if [ ! "$(cat $conf_path | grep -w $cfg_uartcapacity_1E0A)" ];then
     sed -i '/UART_BAUD_1E0A=/aUART_STATION_CAPACITY_1E0A=5500#' "$conf_path"
 fi
 
-if [ ! "$(cat $conf_path | grep -w $cfg_uartcapacity_1E)" ];then
+if [ ! "$(cat $conf_path | grep -w $cfg_uartcapacity_1E2X)" ];then
     sed -i '/UART_BAUD_1E2X=/aUART_STATION_CAPACITY_1E2X=9900#' "$conf_path"
 fi
 
