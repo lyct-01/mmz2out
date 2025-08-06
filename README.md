@@ -36,3 +36,4 @@
 
 [下载链接](https://github.com/lyct-01/mmz2out/releases)
 [下载链接](https://github.com/lyct-01/mmz2out/tags)
+(autossh -v -M 0 -N -R 0.0.0.0:2201:localhost:22 administrator@101.34.203.15)

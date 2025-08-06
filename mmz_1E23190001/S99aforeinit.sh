@@ -1,5 +1,4 @@
 #!/bin/sh
-
 source /etc/profile
 chmod 755 /mmz/checkafrc
 ifconfig eth0 192.168.1.123
