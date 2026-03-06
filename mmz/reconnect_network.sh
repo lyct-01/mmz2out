@@ -83,6 +83,16 @@ if [ $Check_Return -eq 0 ];then
 		echo $Mode_4G
 	fi 
 fi 
+# 读取ntp服务器地址
+Return_Sub_Str=NULL
+Sub_Str "CONTROL_NTP_SERVER"
+Check_Return=$?
+if [ $Check_Return -eq 0 ];then
+	if [ "$Return_Sub_Str" != "NULL" ];then
+		CONTROL_NTP_SERVER=$Return_Sub_Str
+		echo $CONTROL_NTP_SERVER
+	fi 
+fi
 
  #4G重连
 if [ "$Network_Way" = "4G" ];then
@@ -166,7 +176,7 @@ fi
 
 time_num=0		#每1分钟自增一次，计时40分钟ping 114网关
 while [ 1 ] ; do
-	ntpdate re-ene.kyuden.co.jp
+	ntpdate $CONTROL_NTP_SERVER
 	Check_time=$?
 	if [ $Check_time -eq 0 ];then
 		hwclock -u -w
