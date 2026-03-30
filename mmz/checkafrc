@@ -1,5 +1,16 @@
 #!/bin/sh
 
+#==================== 单实例保护（新增） ====================
+LOCK=/tmp/checkafrc.lock
+if [ -f $LOCK ]; then
+    oldpid=$(cat $LOCK)
+    if [ -d /proc/$oldpid ]; then
+        echo "checkafrc already running"
+        exit 0
+    fi
+fi
+echo $$ > $LOCK
+
 #==================== 参数配置 ====================
 PROC_CHECK_INTERVAL=60
 NET_CHECK_INTERVAL=120
@@ -16,19 +27,41 @@ module_reset_count=0
 last_reconnect_time=0
 
 #==================== GPIO 初始化 ====================
-# NET灯灭
 user_gpio GPIO5 3 0
 echo 0 > /tmp/net_status
 
-# 读取网络模式
 Network_Way=$(grep MONITOR_SENSOR_TYPE /mmz/conf/afrmc.conf | cut -d '=' -f2 | cut -d '#' -f1)
 echo "Network mode: $Network_Way"
 
 #==================== 函数 ====================
 
+# ⭐替换：防多实例版本
 check_process()
 {
-    pidof "$1" >/dev/null 2>&1 || /mmz/$1 &
+    name=$1
+    num=$(ps | grep "/mmz/$name" | grep -v grep | wc -l)
+
+    if [ "$num" -eq 0 ]; then
+        echo "start $name"
+        /mmz/$name &
+    elif [ "$num" -gt 1 ]; then
+        echo "$name multi instance ($num), fix"
+        killall -9 $name 2>/dev/null
+        sleep 1
+        /mmz/$name &
+    fi
+}
+
+start_4g_signal()
+{
+    echo "start 4g_signal..."
+
+    ps | grep "cat /dev/ttyUSB2" | grep -v grep | awk '{print $1}' | while read pid
+    do
+        kill -9 $pid 2>/dev/null
+    done
+
+    cat /dev/ttyUSB2 > /mmz/4g_signal &
 }
 
 check_network()
@@ -37,11 +70,9 @@ check_network()
         ping -I eth0 -c 1 -W 3 8.8.8.8 >/dev/null 2>&1
 
     elif [ "$Network_Way" = "4G" ]; then
-        # 如果ppp0不存在，直接返回失败
         if ! ifconfig ppp0 >/dev/null 2>&1; then
             return 1
         fi
-        # 仅根据 ping 判断网络
         ping -I ppp0 -c 1 -W 3 8.8.8.8 >/dev/null 2>&1
     fi
 }
@@ -69,14 +100,21 @@ reset_4g_module()
 echo "network warmup..."
 sleep 30
 
-# 开机初始化网络
 echo "startup network init..."
 sh /mmz/reconnect_network.sh &
 
+start_4g_signal
+
 while true
 do
+    # ⭐关键：检测 invup（新增）
+    if ps | grep afrmc_invup | grep -v grep >/dev/null; then
+        echo "invup running, pause..."
+        sleep 2
+        continue
+    fi
 
-    # 1秒心跳灯
+    # 心跳灯
     led_state=$((1-led_state))
     user_gpio GPIO5 4 $led_state
 
@@ -87,7 +125,17 @@ do
         check_process afrmc_monitor
     fi
 
-    # 每120秒网络检测
+    # 4G信号进程保护
+    if [ "$Network_Way" = "4G" ]; then
+        if [ $((tick % 30)) -eq 0 ]; then
+            ps | grep "cat /dev/ttyUSB2" | grep -v grep >/dev/null || {
+                echo "restart 4g_signal..."
+                start_4g_signal
+            }
+        fi
+    fi
+
+    # 网络检测
     if [ $((tick % NET_CHECK_INTERVAL)) -eq 0 ]; then
 
         check_network
@@ -104,7 +152,6 @@ do
             echo "network fail: $net_fail_count"
         fi
 
-        # ETH恢复策略
         if [ "$Network_Way" = "ETH" ]; then
             if [ $net_fail_count -ge $NET_FAIL_RETRY ]; then
                 restart_network
@@ -112,29 +159,24 @@ do
                 dial_fail_count=$((dial_fail_count+1))
             fi
             if [ $dial_fail_count -ge 10 ]; then
-                echo "ETH unrecoverable reboot"
                 reboot
             fi
         fi
 
-        # 4G恢复策略
         if [ "$Network_Way" = "4G" ]; then
             if [ $net_fail_count -ge $NET_FAIL_RETRY ]; then
                 restart_network
                 net_fail_count=0
                 dial_fail_count=$((dial_fail_count+1))
-                echo "4G redial: $dial_fail_count"
             fi
 
             if [ $dial_fail_count -ge $DIAL_FAIL_RETRY ]; then
                 reset_4g_module
                 dial_fail_count=0
                 module_reset_count=$((module_reset_count+1))
-                echo "4G reset count: $module_reset_count"
             fi
 
             if [ $module_reset_count -ge $MODULE_RESET_RETRY ]; then
-                echo "4G unrecoverable reboot"
                 reboot
             fi
         fi
