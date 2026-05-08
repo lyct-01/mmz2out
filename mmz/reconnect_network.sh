@@ -69,7 +69,9 @@ Sub_Str "CONTROL_NTP_SERVER"; CONTROL_NTP_SERVER=$Return_Sub_Str
 do_4g_ppp()
 {
     echo "-------------4G PPP reconnection-------------"
-    killall -9 pppd
+    killall pppd
+    sleep 3
+    killall -9 pppd 2>/dev/null
     sleep 2
     sh /mmz/ppp/peers/quectel-pppd.sh &
 
