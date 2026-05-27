@@ -39,7 +39,7 @@ fi
 fi
 #读取SIM卡密码
 Return_Sub_Str=NULL
-Sub_Str "SIM_USER"
+Sub_Str "SIM_PASSWORD"
 Check_Return=$?
 if [ $Check_Return -eq 0 ];then
 if [ "$Return_Sub_Str" != "NULL" ];then
