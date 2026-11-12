@@ -81,7 +81,7 @@ fi
 
 CONNECT="'chat -s -v ABORT BUSY ABORT \"NO CARRIER\" ABORT \"NO DIALTONE\" ABORT ERROR ABORT \"NO ANSWER\" TIMEOUT 30 \
 \"\" AT OK ATE0 OK ATI\;+CSUB\;+CSQ\;+CPIN?\;+COPS?\;+CGREG?\;\&D2 \
-OK AT+CGDCONT=1,\\\"IP\\\",\\\"$QL_APN\\\",,0,0 OK ATD*99# CONNECT'"
+OK AT+CGDCONT=1,\\\"IP\\\",\\\"$QL_APN\\\",,0,0 OK AT+QICSGP=1,1,\\\"$QL_APN\\\",\\\"$QL_USER\\\",\\\"$QL_PASSWORD\\\",1 OK ATD*99# CONNECT'"
 
 pppd $QL_DEVNAME 115200 user "$QL_USER" password "$QL_PASSWORD" \
 connect "'$CONNECT'" \

@@ -8,6 +8,13 @@ rm /mmz/log/*.log.*
 sleep 1
 ln /dev/ttymxc1 /dev/ttymxc3
 cat /dev/ttyUSB2  > /mmz/4g_signal &
+NETWORK_WAY=$(grep MONITOR_SENSOR_TYPE /mmz/conf/afrmc.conf | cut -d '=' -f2 | cut -d '#' -f1)
+if [ "$NETWORK_WAY" = "4G" ]; then
+	sleep 1
+	printf "AT+CSQ\r\n" > /dev/ttyUSB2
+	sleep 1
+	printf "AT+CCID\r\n" > /dev/ttyUSB2
+fi
 sleep 1
 cd /mmz/
 /mmz/afrmc_uart >> /dev/null &
