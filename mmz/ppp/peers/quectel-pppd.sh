@@ -48,6 +48,21 @@ echo $QL_PASSWORD
 fi 
 fi
 
+
+# Select a compatible library path for pppd
+PPPD_LD_LIBRARY_PATH="$LD_LIBRARY_PATH"
+
+PPPD_CHECK=$(LD_LIBRARY_PATH=/usr/lib:/lib \
+    /usr/sbin/pppd --version 2>&1)
+
+if [ $? -eq 0 ] && \
+   ! echo "$PPPD_CHECK" | grep -qi "Could not load legacy provider"; then
+    PPPD_LD_LIBRARY_PATH="/usr/lib:/lib"
+    echo "[INFO] Using system OpenSSL libraries"
+else
+    echo "[INFO] Using original library path"
+fi
+
 #quectel-pppd devname apn user password
 echo "quectel-pppd options in effect:"
 QL_DEVNAME=/dev/ttyUSB3
@@ -83,6 +98,7 @@ CONNECT="'chat -s -v ABORT BUSY ABORT \"NO CARRIER\" ABORT \"NO DIALTONE\" ABORT
 \"\" AT OK ATE0 OK ATI\;+CSUB\;+CSQ\;+CPIN?\;+COPS?\;+CGREG?\;\&D2 \
 OK AT+CGDCONT=1,\\\"IP\\\",\\\"$QL_APN\\\",,0,0 OK AT+QICSGP=1,1,\\\"$QL_APN\\\",\\\"$QL_USER\\\",\\\"$QL_PASSWORD\\\",1 OK ATD*99# CONNECT'"
 
+LD_LIBRARY_PATH="$PPPD_LD_LIBRARY_PATH" \
 pppd $QL_DEVNAME 115200 user "$QL_USER" password "$QL_PASSWORD" \
 connect "'$CONNECT'" \
 disconnect 'chat -s -v ABORT ERROR ABORT "NO DIALTONE" SAY "\nSending break to the modem\n" "" +++ "" +++ "" +++ SAY "\nGood bay\n"' \
