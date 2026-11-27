@@ -1,5 +1,6 @@
 #!/bin/sh
-
+#
+#
 #==================== 单实例保护====================
 LOCK=/tmp/checkafrc.lock
 if [ -f $LOCK ]; then
@@ -82,9 +83,9 @@ check_network()
         # 若 ppp0 不存在，则检查 wwan0
         elif ifconfig wwan0 >/dev/null 2>&1; then
             ping -I wwan0 -c 1 -W 3 8.8.8.8 >/dev/null 2>&1
-        elif ifconfig eth1 >/dev/null 2>&1; then
-            ping -I eth1 -c 1 -W 3 8.8.8.8 >/dev/null 2>&1
-        else
+    	elif ifconfig eth1 >/dev/null 2>&1; then
+	    ping -I eth1 -c 1 -W 3 8.8.8.8 >/dev/null 2>&1
+    	else
             # 两个接口都不存在，网络不可用
             return 1
         fi
